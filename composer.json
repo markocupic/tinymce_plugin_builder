@@ -1,0 +1,38 @@
+{
+    "name":"markocupic/tinymce_plugin_builder",
+    "description":"Plugin builder for tinyMCE rte under Contao",
+    "keywords":["contao", "plugin", "builder", "tinyMCE"],
+    "type":"contao-module",
+    "license":"LGPL-3.0+",
+    "authors":[
+        {
+            "name":"Marko Cupic",
+            "email":"m.cupic@gmx.ch",
+            "homepage":"http://4ae-racing-team.ch",
+            "role":"Developer"
+        }
+    ],
+    "support":{
+        "issues":"https://github.com/markocupic/tinymce_plugin_builder/issues",
+        "source":"https://github.com/markocupic/tinymce_plugin_builder"
+    },
+    "require":{
+        "php":">=5.4",
+        "contao/core":">=3.5,<4",
+        "contao-community-alliance/composer-plugin": "*"
+    },
+    
+    "conflict": {
+        "contao/core": "3.0.*"
+    },
+    "autoload":{
+        "classmap":[""]
+    },
+    "extra":{
+        "contao":{
+            "sources":{
+		"TL_ROOT/system/modules/tinymce_plugin_builder":"system/modules/tinymce_plugin_builder"
+            }
+        }
+    }
+}
