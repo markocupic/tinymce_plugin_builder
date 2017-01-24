@@ -20,41 +20,58 @@ namespace TinymcePluginBuilder;
 class TinymcePluginBuilder
 {
 
+    /**
+     * @var
+     */
+    protected $strBuffer;
 
     /**
      * @param $strBuffer
      * @param $strTemplate
      * @return mixed
      */
-    public static function outputBackendTemplate($strBuffer, $strTemplate)
+    public function outputTemplate($strBuffer, $strTemplate)
     {
 
-        if (strpos($strBuffer, 'tinymce.init') === false)
+        // Add strBuffer to $this->strBuffer
+        $this->strBuffer = $strBuffer;
+
+
+        if (strpos($this->strBuffer, 'tinymce.init') === false)
         {
-            return $strBuffer;
+            return $this->strBuffer;
         }
 
 
         // Add plugins
-        $tinyMcePluginPattern = '/window.tinymce(.*)tinymce.init(.*)plugins:(.*)[\'"](.*)[\'"]/sU';
-        if (preg_match($tinyMcePluginPattern, $strBuffer, $matches))
+        $tinyMcePluginPattern = '/window.tinymce(.*)tinymce.init(.*)plugins(.*):(.*)(["\']{1})(.*)\5/sU';
+        if (isset($GLOBALS['TINYMCE']['SETTINGS']['PLUGINS']))
         {
-            if (isset($GLOBALS['TINYMCE']['SETTINGS']['PLUGINS']))
+            if (is_array($GLOBALS['TINYMCE']['SETTINGS']['PLUGINS']))
             {
-
-                if (is_array($GLOBALS['TINYMCE']['SETTINGS']['PLUGINS']))
+                // Add key with empty value if it does not exist
+                if (!preg_match($tinyMcePluginPattern, $this->strBuffer, $matches))
                 {
-                    // $matches[4]: string between single/double quotes
-                    if (isset($matches[4]))
+                    // Add empty key
+                    $this->addRowToConfig('plugins', "''");
+                    // Retest
+                    preg_match($tinyMcePluginPattern, $this->strBuffer, $matches);
+                }
+                if (count($matches) > 0)
+                {
+                    // $matches[6]: string between single/double quotes
+                    if (isset($matches[6]))
                     {
-                        $aPlugins = explode(" ", $matches[4]);
+                        // Plugins are separated with whitespaces
+                        $aPlugins = preg_split("/[\s]+/", $matches[6]);
                         foreach ($GLOBALS['TINYMCE']['SETTINGS']['PLUGINS'] as $plugin)
                         {
                             $aPlugins[] = $plugin;
                         }
+
                         $aPlugins = array_unique($aPlugins);
-                        $strPlugins = implode(' ', $aPlugins);
-                        $strBuffer = str_replace($matches[4], $strPlugins, $strBuffer);
+                        $strPlugins = trim(implode(' ', $aPlugins));
+                        $this->strBuffer = preg_replace($tinyMcePluginPattern, 'window.tinymce\1tinymce.init\2plugins\3:\4\5' . $strPlugins . '\5', $this->strBuffer);
                     }
                 }
             }
@@ -62,18 +79,26 @@ class TinymcePluginBuilder
 
 
         // Add buttons to the toolbar
-        $tinyMceToolbarPattern = '/window.tinymce(.*)tinymce.init(.*)toolbar:(.*)[\'"](.*)[\'"]/sU';
-        if (preg_match($tinyMceToolbarPattern, $strBuffer, $matches))
+        $tinyMceToolbarPattern = '/window.tinymce(.*)tinymce.init(.*)toolbar(.*):(.*)(["\']{1})(.*)\5/sU';
+        if (isset($GLOBALS['TINYMCE']['SETTINGS']['TOOLBAR']))
         {
-            if (isset($GLOBALS['TINYMCE']['SETTINGS']['TOOLBAR']))
+            if (is_array($GLOBALS['TINYMCE']['SETTINGS']['TOOLBAR']))
             {
-
-                if (is_array($GLOBALS['TINYMCE']['SETTINGS']['TOOLBAR']))
+                // Add key with empty value if it does not exist
+                if (!preg_match($tinyMceToolbarPattern, $this->strBuffer, $matches))
                 {
-                    // $matches[4]: string between single/double quotes
-                    if (isset($matches[4]))
+                    // Add empty key
+                    $this->addRowToConfig('toolbar', "''");
+                    // Retest
+                    preg_match($tinyMcePluginPattern, $this->strBuffer, $matches);
+                }
+
+                if (count($matches) > 0)
+                {
+                    // $matches[6]: string between single/double quotes
+                    if (isset($matches[6]))
                     {
-                        $aButtons = explode("|", $matches[4]);
+                        $aButtons = explode("|", $matches[6]);
                         $aButtons = array_map(function ($item)
                         {
                             // Remove whitespaces
@@ -86,39 +111,46 @@ class TinymcePluginBuilder
                         }
 
                         $aButtons = array_unique($aButtons);
-                        $strButtons = implode(' | ', $aButtons);
-                        $strBuffer = str_replace($matches[4], $strButtons, $strBuffer);
+                        $strButtons = trim(implode(' | ', $aButtons));
+                        $this->strBuffer = preg_replace($tinyMceToolbarPattern, 'window.tinymce\1tinymce.init\2toolbar\3:\4\5' . $strButtons . '\5', $this->strBuffer);
                     }
                 }
             }
         }
 
         // Add new config rows
-        $strRows = "";
-        $tinyMceRowPattern = '/window.tinymce(.*)tinymce.init(.*)\({(.*)<\/script>/sU';
-        if (preg_match($tinyMceRowPattern, $strBuffer, $matches))
+        if (isset($GLOBALS['TINYMCE']['SETTINGS']['CONFIG_ROW']))
         {
-            if (isset($GLOBALS['TINYMCE']['SETTINGS']['CONFIG_ROW']))
+            if (is_array($GLOBALS['TINYMCE']['SETTINGS']['CONFIG_ROW']))
             {
-
-                if (is_array($GLOBALS['TINYMCE']['SETTINGS']['CONFIG_ROW']))
+                foreach ($GLOBALS['TINYMCE']['SETTINGS']['CONFIG_ROW'] as $key => $row)
                 {
-                    if (isset($matches[3]))
-                    {
-
-                        foreach ($GLOBALS['TINYMCE']['SETTINGS']['CONFIG_ROW'] as $key => $row)
-                        {
-                            $strRows .= "\n\t" . $key . ": " . $row . ",";
-                        }
-
-                        $strBuffer = str_replace($matches[3], $strRows . $matches[3], $strBuffer);
-                    }
+                    $this->addRowToConfig($key, $row);
                 }
             }
         }
 
+        return $this->strBuffer;
+    }
 
-        return $strBuffer;
+
+    /**
+     * Add a new config row to tinymce.init({})
+     * @param $key
+     * @param $value
+     */
+    private function addRowToConfig($key, $value)
+    {
+        $tinyMceRowPattern = '/window.tinymce(.*)tinymce.init(.*)\({(.*)<\/script>/sU';
+        if (preg_match($tinyMceRowPattern, $this->strBuffer, $matches))
+        {
+
+            if (isset($matches[3]))
+            {
+                $strRow = "\n\t" . $key . ": " . $value . ",";
+                $this->strBuffer = str_replace($matches[3], $strRow . $matches[3], $this->strBuffer);
+            }
+        }
     }
 }
 

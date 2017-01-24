@@ -10,5 +10,6 @@
 if ($GLOBALS['TL_CONFIG']['useRTE'])
 {
     // Modify tinymce.init method in template before sending the output to the browser
-    $GLOBALS['TL_HOOKS']['outputBackendTemplate'][] = array('TinymcePluginBuilder', 'outputBackendTemplate');
+    $GLOBALS['TL_HOOKS']['outputFrontendTemplate'][] = array('TinymcePluginBuilder', 'outputTemplate');
+    $GLOBALS['TL_HOOKS']['outputBackendTemplate'][] = array('TinymcePluginBuilder', 'outputTemplate');
 }

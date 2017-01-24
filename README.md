@@ -24,8 +24,9 @@ $GLOBALS['TINYMCE']['SETTINGS']['CONFIG_ROW']['test_string'] = "'This is a test 
 // Add a new config row to the tinymce.init method (json_encoded array from a PHP class)
 $GLOBALS['TINYMCE']['SETTINGS']['CONFIG_ROW']['newslink_news_data'] = json_encode(TinymceNewslink\TinymceNewslink::getContaoNewsArchivesAsJSON());
 
-// Add a new config row to the tinymce.init method (json_encoded array from a language file)
-$GLOBALS['TINYMCE']['SETTINGS']['CONFIG_ROW']['newslink_language_data'] = json_encode($GLOBALS['TL_LANG']['TINYMCE']['NEWSLINK']);
+// Add a new config row to the tinymce.init method (use the loadLanguageFile-hook)
+$GLOBALS['TL_HOOKS']['loadLanguageFile'][] = array('TinymceNewslink\TinymceNewslink', 'loadLanguageData');
+
 
 ```
 
