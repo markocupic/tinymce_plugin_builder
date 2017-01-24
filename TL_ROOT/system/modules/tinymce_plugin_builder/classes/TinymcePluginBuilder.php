@@ -35,7 +35,7 @@ class TinymcePluginBuilder
         }
 
 
-        //Plugins
+        // Add plugins
         $tinyMcePluginPattern = '/window.tinymce(.*)tinymce.init(.*)plugins:(.*)[\'"](.*)[\'"]/sU';
         if (preg_match($tinyMcePluginPattern, $strBuffer, $matches))
         {
@@ -61,7 +61,7 @@ class TinymcePluginBuilder
         }
 
 
-        // Toolbar
+        // Add buttons to the toolbar
         $tinyMceToolbarPattern = '/window.tinymce(.*)tinymce.init(.*)toolbar:(.*)[\'"](.*)[\'"]/sU';
         if (preg_match($tinyMceToolbarPattern, $strBuffer, $matches))
         {
@@ -76,7 +76,7 @@ class TinymcePluginBuilder
                         $aButtons = explode("|", $matches[4]);
                         $aButtons = array_map(function ($item)
                         {
-                            // Remvoe whitespaces
+                            // Remove whitespaces
                             return trim($item);
                         }, $aButtons);
 
