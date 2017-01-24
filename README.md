@@ -1,4 +1,4 @@
-### Tinymce plugin builder
+# Tinymce plugin builder
 Dieses Plugin dient als Grundlage um TinyMCE mit wenig Aufwand mit zusätzlichen selber geschriebenen Plugins nachzuruesten. 
 Als Vorlage kann https://github.com/markocupic/tinymce_newslink dienen. 
 
