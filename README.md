@@ -1,5 +1,5 @@
 # Tinymce plugin builder
-Dieses Plugin dient als Grundlage um TinyMCE mit wenig Aufwand mit zusätzlichen selber geschriebenen Plugins nachzuruesten. 
+Dieses Plugin dient als Grundlage/Basis um TinyMCE mit wenig Aufwand mit zusätzlichen, selber geschriebenen Plugins nachzurüsten. 
 Als Vorlage kann https://github.com/markocupic/tinymce_newslink dienen. 
 
 ## Plugin in der config.php konfigurieren
