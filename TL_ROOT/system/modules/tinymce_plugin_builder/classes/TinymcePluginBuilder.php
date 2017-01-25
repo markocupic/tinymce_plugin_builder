@@ -26,6 +26,18 @@ class TinymcePluginBuilder
     protected $strBuffer;
 
     /**
+     * @var string
+     */
+    protected $regexMatch = '/script\>window.tinymce(.*)setTimeout(.*)window.tinymce(.*)tinymce.init(.*)([\s,\{])%s([\s]*):([\s]*)(["\']{1})(.*)\8(.*)<\/script>/sU';
+
+    /**
+     * @var string
+     */
+    protected $regexReplace = 'script>window.tinymce\1setTimeout\2window.tinymce\3tinymce.init\4\5%s\6:\7\8%s\8\10</script>';
+
+
+
+    /**
      * @param $strBuffer
      * @param $strTemplate
      * @return mixed
@@ -33,7 +45,6 @@ class TinymcePluginBuilder
     public function outputTemplate($strBuffer, $strTemplate)
     {
 
-        // Add strBuffer to $this->strBuffer
         $this->strBuffer = $strBuffer;
 
 
@@ -43,80 +54,79 @@ class TinymcePluginBuilder
         }
 
 
-        // Add plugins
-        $tinyMcePluginPattern = '/window.tinymce(.*)tinymce.init(.*)plugins(.*):(.*)(["\']{1})(.*)\5/sU';
-        if (isset($GLOBALS['TINYMCE']['SETTINGS']['PLUGINS']))
+        // Extend lines in "tinymce.init({})" with some new content
+        $arrKeys = array('plugins', 'toolbar');
+        foreach ($arrKeys as $key)
         {
-            if (is_array($GLOBALS['TINYMCE']['SETTINGS']['PLUGINS']))
+            $regexMatch = sprintf($this->regexMatch, $key);
+            if (isset($GLOBALS['TINYMCE']['SETTINGS'][strtoupper($key)]))
             {
-                // Add key with empty value if it does not exist
-                if (!preg_match($tinyMcePluginPattern, $this->strBuffer, $matches))
+                if (is_array($GLOBALS['TINYMCE']['SETTINGS'][strtoupper($key)]))
                 {
-                    // Add empty key
-                    $this->addRowToConfig('plugins', "''");
-                    // Retest
-                    preg_match($tinyMcePluginPattern, $this->strBuffer, $matches);
-                }
-                if (count($matches) > 0)
-                {
-                    // $matches[6]: string between single/double quotes
-                    if (isset($matches[6]))
+                    // Add key with empty value if it does not exist
+                    if (!preg_match($regexMatch, $this->strBuffer, $matches))
                     {
-                        // Plugins are separated with whitespaces
-                        $aPlugins = preg_split("/[\s]+/", $matches[6]);
-                        foreach ($GLOBALS['TINYMCE']['SETTINGS']['PLUGINS'] as $plugin)
-                        {
-                            $aPlugins[] = $plugin;
-                        }
+                        // Add empty key
+                        $this->addRow($key, "''");
 
-                        $aPlugins = array_unique($aPlugins);
-                        $strPlugins = trim(implode(' ', $aPlugins));
-                        $this->strBuffer = preg_replace($tinyMcePluginPattern, 'window.tinymce\1tinymce.init\2plugins\3:\4\5' . $strPlugins . '\5', $this->strBuffer);
+                        // Retest
+                        preg_match($regexMatch, $this->strBuffer, $matches);
+                    }
+
+
+                    if (count($matches) > 0)
+                    {
+                        // $matches[9]: string between single/double quotes (value)
+                        if (isset($matches[9]))
+                        {
+                            $oldValue = $matches[9];
+                            $newValue = '';
+
+
+                            // Plugins
+                            if ($key == 'plugins')
+                            {
+                                // Plugins are separated with whitespaces
+                                $aPlugins = preg_split("/[\s]+/", $oldValue);
+                                foreach ($GLOBALS['TINYMCE']['SETTINGS'][strtoupper($key)] as $plugin)
+                                {
+                                    $aPlugins[] = $plugin;
+                                }
+
+                                $aPlugins = array_unique($aPlugins);
+                                $newValue = trim(implode(' ', $aPlugins));
+                            }
+
+
+                            // Toolbar buttons
+                            if ($key == 'toolbar')
+                            {
+                                $aButtons = explode("|", $oldValue);
+                                $aButtons = array_map(function ($item)
+                                {
+                                    // Remove whitespaces
+                                    return trim($item);
+                                }, $aButtons);
+
+                                foreach ($GLOBALS['TINYMCE']['SETTINGS'][strtoupper($key)] as $button)
+                                {
+                                    $aButtons[] = $button;
+                                }
+
+                                $aButtons = array_unique($aButtons);
+                                $newValue = trim(implode(' | ', $aButtons));
+                            }
+
+
+                            $regexReplace = sprintf($this->regexReplace, $key, $newValue);
+                            $this->strBuffer = preg_replace($regexMatch, $regexReplace, $this->strBuffer);
+                        }
                     }
                 }
             }
         }
 
 
-        // Add buttons to the toolbar
-        $tinyMceToolbarPattern = '/window.tinymce(.*)tinymce.init(.*)toolbar(.*):(.*)(["\']{1})(.*)\5/sU';
-        if (isset($GLOBALS['TINYMCE']['SETTINGS']['TOOLBAR']))
-        {
-            if (is_array($GLOBALS['TINYMCE']['SETTINGS']['TOOLBAR']))
-            {
-                // Add key with empty value if it does not exist
-                if (!preg_match($tinyMceToolbarPattern, $this->strBuffer, $matches))
-                {
-                    // Add empty key
-                    $this->addRowToConfig('toolbar', "''");
-                    // Retest
-                    preg_match($tinyMcePluginPattern, $this->strBuffer, $matches);
-                }
-
-                if (count($matches) > 0)
-                {
-                    // $matches[6]: string between single/double quotes
-                    if (isset($matches[6]))
-                    {
-                        $aButtons = explode("|", $matches[6]);
-                        $aButtons = array_map(function ($item)
-                        {
-                            // Remove whitespaces
-                            return trim($item);
-                        }, $aButtons);
-
-                        foreach ($GLOBALS['TINYMCE']['SETTINGS']['TOOLBAR'] as $button)
-                        {
-                            $aButtons[] = $button;
-                        }
-
-                        $aButtons = array_unique($aButtons);
-                        $strButtons = trim(implode(' | ', $aButtons));
-                        $this->strBuffer = preg_replace($tinyMceToolbarPattern, 'window.tinymce\1tinymce.init\2toolbar\3:\4\5' . $strButtons . '\5', $this->strBuffer);
-                    }
-                }
-            }
-        }
 
         // Add new config rows
         if (isset($GLOBALS['TINYMCE']['SETTINGS']['CONFIG_ROW']))
@@ -125,7 +135,7 @@ class TinymcePluginBuilder
             {
                 foreach ($GLOBALS['TINYMCE']['SETTINGS']['CONFIG_ROW'] as $key => $row)
                 {
-                    $this->addRowToConfig($key, $row);
+                    $this->addRow($key, $row);
                 }
             }
         }
@@ -139,16 +149,16 @@ class TinymcePluginBuilder
      * @param $key
      * @param $value
      */
-    private function addRowToConfig($key, $value)
+    private function addRow($key, $value)
     {
-        $tinyMceRowPattern = '/window.tinymce(.*)tinymce.init(.*)\({(.*)<\/script>/sU';
+        $tinyMceRowPattern = '/script\>window.tinymce(.*)setTimeout(.*)window.tinymce(.*)tinymce.init(.*)\({(.*)<\/script>/sU';
         if (preg_match($tinyMceRowPattern, $this->strBuffer, $matches))
         {
 
-            if (isset($matches[3]))
+            if (isset($matches[5]))
             {
                 $strRow = "\n\t" . $key . ": " . $value . ",";
-                $this->strBuffer = str_replace($matches[3], $strRow . $matches[3], $this->strBuffer);
+                $this->strBuffer = str_replace($matches[5], $strRow . $matches[5], $this->strBuffer);
             }
         }
     }
